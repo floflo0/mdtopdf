@@ -1,0 +1,18 @@
+[MASTER]
+py-version=3.10
+
+exit-zero=no
+
+[MESSAGES CONTROL]
+disable=too-many-arguments, too-many-return-statements, too-many-branches
+
+[FORMAT]
+max-line-length=80
+
+[BASIC]
+# Good variable names which should always be accepted, separated by a comma.
+good-names=i, j, k, _, x, y
+
+[REPORTS]
+score=no
+
