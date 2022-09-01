@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
-'''
-mdtopdf
+'''mdtopdf
 Convert markdown file to pdf file using chromium.
 
 Usage:
@@ -9,31 +8,43 @@ mdtopdf.py --help
 '''
 
 import os
-import sys
+import shutil
 import subprocess
+import sys
+
+import markdown
 
 
 __version__ = '1.0.0'
 
 
-TMP_FILE_NAME = 'md2pdf_tmp_file.html'
-CSS_URL = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/'
-           'github-markdown-light.css')
+TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
+CSS_URL: str = ('https://raw.githubusercontent.com/sindresorhus/'
+                'github-markdown-css/main/github-markdown-light.css')
 
 
-def md_to_html(markdown_file: str, output_file: str, no_css: bool) -> None:
-    '''Convert the markdown file to html using md2html.
+def error(message: str) -> None:
+    '''Print a formated error message in stderr.
 
     Args:
-        markdown_file: the path to the markdown file
-        output_file: the path to the html file generated
+        message: the error message to print
     '''
-    html_code = subprocess.run(
-        ['md2html', markdown_file],
-        check=True,
-        capture_output=True
-    ).stdout.decode('utf-8')
-    with open(output_file, 'w', encoding='utf-8') as html_file:
+    print(f'Error: {message}', file=sys.stderr)
+
+
+def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
+               ) -> None:
+    '''Convert the markdown file to html.
+
+    Args:
+        markdown_file_path: the path to the markdown file
+        html_file_path: the path to the html file generated
+    '''
+    with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
+        html_code = markdown.markdown(markdown_file.read(),
+                                      extensions=['fenced_code', 'nl2br'])
+
+    with open(html_file_path, 'w', encoding='utf-8') as html_file:
         print('<!DOCTYPE html>', file=html_file)
         print('<html>', file=html_file)
         print('<head>', file=html_file)
@@ -47,38 +58,47 @@ def md_to_html(markdown_file: str, output_file: str, no_css: bool) -> None:
         print('</html>', file=html_file)
 
 
-def html_to_pdf(html_file: str, output_file: str) -> None:
+def find_chromium_name() -> str:
+    '''Return the chromium executable name or an empty string if no chromium
+    executable is find.'''
+    for name in ['chromium', 'chromium-browser']:
+        if shutil.which(name) is not None:
+            return name
+
+    return ''
+
+
+def html_to_pdf(html_file_path: str, pdf_file_path: str, chromium: str) -> None:
     '''Convert the html file to pdf using chromium.
 
     Args:
-       html_file: the path to the html file
-       output_file: the path to the pdf file
+        html_file_path: the path to the html file
+        pdf_file_path: the path to the pdf file
+        chromium: the path to the chromium executable to use.
     '''
+    chromium = find_chromium_name()
+    if not chromium:
+        error('could not find chromium executable')
+
     subprocess.run([
-        'chromium', '--headless', '--disable-gpu',
-        f'--print-to-pdf={output_file}', '--print-to-pdf-no-header', html_file
+        chromium, '--headless', '--disable-gpu',
+        f'--print-to-pdf={pdf_file_path}', '--print-to-pdf-no-header',
+        html_file_path
     ], check=True, capture_output=True)
 
 
-def md_to_pdf(file: str, output_file: str, no_css: bool) -> None:
+def md_to_pdf(markdown_file_path: str, pdf_file_path: str, no_css: bool,
+              chromium: str) -> None:
     '''Convert the markdown file to pdf.
 
     Args:
-        markdown_file: the path to the markdown file
-        output_file: the path to the pdf file generated
+        markdown_file_path: the path to the markdown file
+        pdf_file_path: the path to the pdf file generated
+        chromium: the path to the chromium executable to use.
     '''
-    md_to_html(file, TMP_FILE_NAME, no_css)
-    html_to_pdf(TMP_FILE_NAME, output_file)
+    md_to_html(markdown_file_path, TMP_FILE_NAME, no_css)
+    html_to_pdf(TMP_FILE_NAME, pdf_file_path, chromium)
     os.remove(TMP_FILE_NAME)
-
-
-def error(msg: str) -> None:
-    '''Print a formated error message in stderr.
-
-    Args:
-        msg: the message to print
-    '''
-    print(f'Error: {msg}', file=sys.stderr)
 
 
 def usage(command_name: str) -> None:
@@ -95,7 +115,7 @@ def usage(command_name: str) -> None:
     print('  -h, --help              Print this help message and exit')
     print('  -v, --version           Print the version number and exit')
     print('  -o, --ouput-file <file> Name of output file')
-    print('  --no-css                Use the default appearance of chromium')
+    print('  --no-css                Use the default styles of chromium')
 
 
 def cli(args: list[str]) -> int:
@@ -161,18 +181,23 @@ def cli(args: list[str]) -> int:
             output_file = output_file[:-3]
         output_file += '.pdf'
 
-    if not os.path.exists(file_path):
-        error(f"can't open {repr(file_path)}: no such file or directory")
-        return 1
-
     if os.path.isdir(file_path):
         error(f'{file_path} is a directory')
         return 1
 
+    if not os.path.exists(file_path):
+        error(f'can\'t open {repr(file_path)}: no such file or directory')
+        return 1
+
+    chromium = find_chromium_name()
+    if not chromium:
+        error('could not find chromium executable')
+        return 1
+
     try:
-        md_to_pdf(file_path, output_file, no_css)
+        md_to_pdf(file_path, output_file, no_css, chromium)
     except subprocess.CalledProcessError:
-        error('Impossble to generate pdf')
+        error('impossble to generate the pdf')
         return 1
 
     return 0

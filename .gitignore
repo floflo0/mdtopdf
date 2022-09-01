@@ -1,4 +1,5 @@
 .mypy_cache
 __pycache__
 mdtopdf-*.pkg.tar.zst
+mdtopdf-*.deb
 

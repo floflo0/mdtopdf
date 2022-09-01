@@ -1,2 +1,0 @@
-set makeprg=./test.sh
-

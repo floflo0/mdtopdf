@@ -1,8 +1,7 @@
-#!/bin/sh
+#!/usr/bin/sh
 
-set -e
+set -xe
 
 mypy
 ./test.py
 pylint *.py
-

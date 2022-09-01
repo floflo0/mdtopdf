@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 '''tests for mdtopdf'''
 
@@ -86,7 +86,7 @@ class TestCli(unittest.TestCase):
             '  -h, --help              Print this help message and exit\n'
             '  -v, --version           Print the version number and exit\n'
             '  -o, --ouput-file <file> Name of output file\n'
-            '  --no-css                Use the default appearance of chromium\n'
+            '  --no-css                Use the default styles of chromium\n'
         )
         self.assert_command(
             'test help short flag',
@@ -141,6 +141,21 @@ class TestCli(unittest.TestCase):
             stderr='Error: too many arguments\n'
         )
 
+    def test_no_chromium(self) -> None:
+        '''test when no chromium executable is in the path.'''
+        path = os.environ['PATH']
+        os.environ['PATH'] = ''
+        def restore_path() -> None:
+            os.environ['PATH'] = path
+        self.addCleanup(restore_path)
+        self.assert_command(
+            'test no chromium',
+            cli,
+            ['cli', 'README.md'],
+            returncode=1,
+            stderr='Error: could not find chromium executable\n'
+        )
+
     def test_unknow_option(self) -> None:
         '''test unknow argument'''
         self.assert_command(
@@ -159,7 +174,7 @@ class TestCli(unittest.TestCase):
             ['cli', 'README.md']
         )
         self.assertTrue(os.path.isfile('README.pdf'))
-        self.assertFalse(os.path.exists(TMP_FILE_NAME), 'tmp file removed')
+        self.assertFalse(os.path.exists(TMP_FILE_NAME), 'tmp file not removed')
 
     def test_output_file(self) -> None:
         '''test output file option'''
