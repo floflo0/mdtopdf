@@ -19,8 +19,8 @@ __version__ = '1.0.0'
 
 
 TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
-CSS_URL: str = ('https://raw.githubusercontent.com/sindresorhus/'
-                'github-markdown-css/main/github-markdown-light.css')
+CSS_URL: str = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/'
+                '5.1.0/github-markdown-light.css')
 
 
 def error(message: str) -> None:
