@@ -28,6 +28,11 @@ Install [markdown](https://pypi.org/project/Markdown) :
 pip install markdown
 ```
 
+Install [pygments](https://pygments.org)
+```sh
+pip install pygments
+```
+
 ### Archlinux
 
 Create the arch-package and install it.
@@ -47,10 +52,11 @@ sudo apt install ./mdtopdf.deb
 
 ## Developpement
 
-Install markdown library types for mypy :
+Install markdown and pygments libraries types for mypy :
 
 ```sh
-sudo python3 -m pip install types-Markdown
+pip install types-Markdown
+pip install types-Pygments
 ```
 
 Run the tests :
@@ -61,4 +67,5 @@ Run the tests :
 
 ## Styles
 
-The [css](https://github.com/sindresorhus/github-markdown-css)  use for rendering the pdf.
+The [css](https://github.com/sindresorhus/github-markdown-css) use for
+rendering the pdf.
