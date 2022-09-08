@@ -15,8 +15,8 @@ import sys
 import markdown
 from markdown.extensions import Extension
 from markdown.extensions.codehilite import CodeHiliteExtension
-from pygments.token import Text
 from pygments.styles import get_style_by_name
+from pygments.token import Text
 
 
 __version__ = '1.0.0'
@@ -26,7 +26,7 @@ TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
 CSS_URL: str = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/'
                 '5.1.0/github-markdown-light.css')
 COLORSCHEME: str = 'dracula'
-
+CSS_CLASS: str = 'codehilite'
 
 def error(message: str) -> None:
     '''Print a formated error message in stderr.
@@ -34,7 +34,7 @@ def error(message: str) -> None:
     Args:
         message: the error message to print
     '''
-    print(f'Error: {message}', file=sys.stderr)
+    sys.stderr.write(f'Error: {message}\n')
 
 
 def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
@@ -48,7 +48,7 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
     extensions: list[str | Extension]   = ['fenced_code', 'nl2br']
     if not no_css:
         extensions.append(CodeHiliteExtension(noclasses=True,
-                          pygments_style=COLORSCHEME))
+                          pygments_style=COLORSCHEME, css_class=CSS_CLASS))
 
     with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
 
@@ -56,22 +56,32 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
                                       extensions=extensions)
 
     with open(html_file_path, 'w', encoding='utf-8') as html_file:
-        print('<!DOCTYPE html>', file=html_file)
-        print('<html>', file=html_file)
-        print('<head>', file=html_file)
-        print('<meta charset="utf-8">', file=html_file)
+        html_file.write('<!DOCTYPE html>\n')
+        html_file.write('<html>\n')
+        html_file.write('<head>\n')
+        html_file.write('<meta charset="utf-8">\n')
         if not no_css:
-            print(f'<link rel="stylesheet" href="{CSS_URL}">', file=html_file)
-            print('<style>pre {', file=html_file)
-            print('    background: unset !important;', file=html_file)
+            # use the background color of the syntax hilighting colorscheme and
+            # not from the css
+            background = get_style_by_name(COLORSCHEME).background_color
+            # set default color depending on the colorscheme for the code blocks
             color = get_style_by_name(COLORSCHEME).styles[Text]
-            print(f'    color: {color};', file=html_file)
-            print('}}</style>', file=html_file)
-        print('</head>', file=html_file)
-        print('<body class="markdown-body">', file=html_file)
-        print(html_code, file=html_file)
-        print('</body>', file=html_file)
-        print('</html>', file=html_file)
+            html_file.write(f'<link rel="stylesheet" href="{CSS_URL}">\n')
+            html_file.write(f'<link rel="stylesheet" href="{CSS_URL}">\n')
+            html_file.write('<style>\n')
+            html_file.write(f'.{CSS_CLASS} {{\n')
+            html_file.write('background: unset !important;\n')
+            html_file.write('}\n')
+            html_file.write('pre {\n')
+            html_file.write(f'background: {background} !important;\n')
+            html_file.write(f'color: {color};\n')
+            html_file.write('}\n')
+            html_file.write('</style>\n')
+        html_file.write('</head>\n')
+        html_file.write('<body class="markdown-body">\n')
+        html_file.write(f'{html_code}\n')
+        html_file.write('</body>\n')
+        html_file.write('</html>\n')
 
 
 def find_chromium_name() -> str:
