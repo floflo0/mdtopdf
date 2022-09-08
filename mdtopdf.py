@@ -13,6 +13,10 @@ import subprocess
 import sys
 
 import markdown
+from markdown.extensions import Extension
+from markdown.extensions.codehilite import CodeHiliteExtension
+from pygments.token import Text
+from pygments.styles import get_style_by_name
 
 
 __version__ = '1.0.0'
@@ -21,6 +25,7 @@ __version__ = '1.0.0'
 TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
 CSS_URL: str = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/'
                 '5.1.0/github-markdown-light.css')
+COLORSCHEME: str = 'dracula'
 
 
 def error(message: str) -> None:
@@ -40,9 +45,15 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
         markdown_file_path: the path to the markdown file
         html_file_path: the path to the html file generated
     '''
+    extensions: list[str | Extension]   = ['fenced_code', 'nl2br']
+    if not no_css:
+        extensions.append(CodeHiliteExtension(noclasses=True,
+                          pygments_style=COLORSCHEME))
+
     with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
+
         html_code = markdown.markdown(markdown_file.read(),
-                                      extensions=['fenced_code', 'nl2br'])
+                                      extensions=extensions)
 
     with open(html_file_path, 'w', encoding='utf-8') as html_file:
         print('<!DOCTYPE html>', file=html_file)
@@ -51,6 +62,11 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
         print('<meta charset="utf-8">', file=html_file)
         if not no_css:
             print(f'<link rel="stylesheet" href="{CSS_URL}">', file=html_file)
+            print('<style>pre {', file=html_file)
+            print('    background: unset !important;', file=html_file)
+            color = get_style_by_name(COLORSCHEME).styles[Text]
+            print(f'    color: {color};', file=html_file)
+            print('}}</style>', file=html_file)
         print('</head>', file=html_file)
         print('<body class="markdown-body">', file=html_file)
         print(html_code, file=html_file)
