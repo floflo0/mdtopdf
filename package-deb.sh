@@ -26,7 +26,7 @@ Description: ${PKGDESC}
 Maintainer: Floris Bartra <floris.bartra@gmail.com>
 Version: ${PKGVER}
 Architecture: all
-Depends: python3, python3-markdown, chromium-browser
+Depends: python3, python3-markdown, python3-pygments, chromium-browser
 EOF
 
 dpkg-deb --verbose --build "${PKGDIR}" "${PKGNAME}-${PKGVER}.deb"
