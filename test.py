@@ -253,6 +253,34 @@ class TestCli(unittest.TestCase):
             ['cli', 'README.md', '--no-css', '-o', 'no-css.pdf']
         )
 
+    def test_change_colorscheme(self) -> None:
+        '''test changing the colorscheme'''
+        self.assert_command(
+            'test change colorscheme',
+            cli,
+            ['cli', 'README.md', '--colorscheme', 'one-dark']
+        )
+
+    def test_unknow_colorscheme(self) -> None:
+        '''test unknow colorscheme'''
+        self.assert_command(
+            'test unknow colorscheme',
+            cli,
+            ['cli', 'README.md', '--colorscheme', 'unknow colorscheme'],
+            returncode=1,
+            stderr='Error: unknow colorscheme \'unknow colorscheme\'\n'
+        )
+
+    def test_no_colorscheme(self) -> None:
+        '''test give no colorscheme'''
+        self.assert_command(
+            'test no colorscheme',
+            cli,
+            ['cli', 'README.md', '--colorscheme'],
+            returncode=1,
+            stderr='Error: argument --colorscheme: expected one argument\n'
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

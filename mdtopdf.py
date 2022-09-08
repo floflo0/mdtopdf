@@ -15,7 +15,7 @@ import sys
 import markdown
 from markdown.extensions import Extension
 from markdown.extensions.codehilite import CodeHiliteExtension
-from pygments.styles import get_style_by_name
+from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Text
 
 
@@ -25,7 +25,7 @@ __version__ = '1.0.0'
 TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
 CSS_URL: str = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/'
                 '5.1.0/github-markdown-light.css')
-COLORSCHEME: str = 'dracula'
+DEFAULT_COLORSCHEME: str = 'dracula'
 CSS_CLASS: str = 'codehilite'
 
 def error(message: str) -> None:
@@ -37,8 +37,8 @@ def error(message: str) -> None:
     sys.stderr.write(f'Error: {message}\n')
 
 
-def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
-               ) -> None:
+def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool,
+               colorscheme: str) -> None:
     '''Convert the markdown file to html.
 
     Args:
@@ -48,7 +48,7 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
     extensions: list[str | Extension]   = ['fenced_code', 'nl2br']
     if not no_css:
         extensions.append(CodeHiliteExtension(noclasses=True,
-                          pygments_style=COLORSCHEME, css_class=CSS_CLASS))
+                          pygments_style=colorscheme, css_class=CSS_CLASS))
 
     with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
 
@@ -63,9 +63,9 @@ def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool
         if not no_css:
             # use the background color of the syntax hilighting colorscheme and
             # not from the css
-            background = get_style_by_name(COLORSCHEME).background_color
+            background = get_style_by_name(colorscheme).background_color
             # set default color depending on the colorscheme for the code blocks
-            color = get_style_by_name(COLORSCHEME).styles[Text]
+            color = get_style_by_name(colorscheme).styles[Text]
             html_file.write(f'<link rel="stylesheet" href="{CSS_URL}">\n')
             html_file.write(f'<link rel="stylesheet" href="{CSS_URL}">\n')
             html_file.write('<style>\n')
@@ -114,7 +114,7 @@ def html_to_pdf(html_file_path: str, pdf_file_path: str, chromium: str) -> None:
 
 
 def md_to_pdf(markdown_file_path: str, pdf_file_path: str, no_css: bool,
-              chromium: str) -> None:
+              colorscheme: str, chromium: str) -> None:
     '''Convert the markdown file to pdf.
 
     Args:
@@ -122,7 +122,7 @@ def md_to_pdf(markdown_file_path: str, pdf_file_path: str, no_css: bool,
         pdf_file_path: the path to the pdf file generated
         chromium: the path to the chromium executable to use.
     '''
-    md_to_html(markdown_file_path, TMP_FILE_NAME, no_css)
+    md_to_html(markdown_file_path, TMP_FILE_NAME, no_css, colorscheme)
     html_to_pdf(TMP_FILE_NAME, pdf_file_path, chromium)
     os.remove(TMP_FILE_NAME)
 
@@ -142,6 +142,7 @@ def usage(command_name: str) -> None:
     print('  -v, --version           Print the version number and exit')
     print('  -o, --ouput-file <file> Name of output file')
     print('  --no-css                Use the default styles of chromium')
+    print('  --colorscheme <name>    Set the colorscheme use for code blocks')
 
 
 def cli(args: list[str]) -> int:
@@ -162,6 +163,7 @@ def cli(args: list[str]) -> int:
     file_path: str | None = None
     output_file: str | None = None
     no_css = False
+    colorscheme: str | None = None
 
     while args:
         arg = args.pop(0)
@@ -180,6 +182,14 @@ def cli(args: list[str]) -> int:
                 output_file = args.pop(0)
             case '--no-css':
                 no_css = True
+            case '--colorscheme':
+                if not args:
+                    error('argument --colorscheme: expected one argument')
+                    return 1
+                colorscheme = args.pop(0)
+                if colorscheme not in get_all_styles():
+                    error(f'unknow colorscheme {repr(colorscheme)}')
+                    return 1
             case _:
                 if arg and arg[0] == '-':
                     error(f'unknow argument {repr(arg)}')
@@ -215,13 +225,16 @@ def cli(args: list[str]) -> int:
         error(f'can\'t open {repr(file_path)}: no such file or directory')
         return 1
 
+    if colorscheme is None:
+        colorscheme = DEFAULT_COLORSCHEME
+
     chromium = find_chromium_name()
     if not chromium:
         error('could not find chromium executable')
         return 1
 
     try:
-        md_to_pdf(file_path, output_file, no_css, chromium)
+        md_to_pdf(file_path, output_file, no_css, colorscheme, chromium)
     except subprocess.CalledProcessError:
         error('impossble to generate the pdf')
         return 1
