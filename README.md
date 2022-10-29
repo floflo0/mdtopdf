@@ -29,6 +29,7 @@ pip install markdown
 ```
 
 Install [pygments](https://pygments.org)
+
 ```sh
 pip install pygments
 ```
@@ -43,11 +44,11 @@ makepkg -cfi
 
 ### Ubuntu
 
-Create the deb package adn install it.
+Create the deb package and install it.
 
 ```sh
 ./package-deb.sh
-sudo apt install ./mdtopdf.deb
+sudo apt install ./mdtopdf_1.0.0-1_amd64.deb
 ```
 
 ## Developpement

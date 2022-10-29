@@ -87,6 +87,8 @@ class TestCli(unittest.TestCase):
             '  -v, --version           Print the version number and exit\n'
             '  -o, --ouput-file <file> Name of output file\n'
             '  --no-css                Use the default styles of chromium\n'
+            '  --colorscheme <name>    Set the colorscheme use for code blocks'
+            '\n'
         )
         self.assert_command(
             'test help short flag',
@@ -128,7 +130,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli'],
             returncode=1,
-            stderr='Error: no input file provided\n'
+            stderr='cli: error: no input file provided\n'
         )
 
     def test_too_many_args(self) -> None:
@@ -138,7 +140,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'file1', 'file2', 'file3'],
             returncode=1,
-            stderr='Error: too many arguments\n'
+            stderr='cli: error: too many arguments\n'
         )
 
     def test_no_chromium(self) -> None:
@@ -153,7 +155,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'README.md'],
             returncode=1,
-            stderr='Error: could not find chromium executable\n'
+            stderr='cli: error: could not find chromium executable\n'
         )
 
     def test_unknow_option(self) -> None:
@@ -163,7 +165,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', '--unknow-arg'],
             returncode=1,
-            stderr="Error: unknow argument '--unknow-arg'\n"
+            stderr="cli: error: unknow argument '--unknow-arg'\n"
         )
 
     def test_convert_file(self) -> None:
@@ -198,14 +200,16 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'file', '-o'],
             returncode=1,
-            stderr='Error: argument expected for the -o option\n'
+            stderr='cli: error: argument expected for the -o option\n'
         )
         self.assert_command(
             'test no output file long',
             cli,
             ['cli', 'file', '--output-file'],
             returncode=1,
-            stderr='Error: argument expected for the --output-file option\n'
+            stderr=(
+                'cli: error: argument expected for the --output-file option\n'
+            )
         )
 
     def test_2_output_file(self) -> None:
@@ -215,14 +219,14 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'file', '-o', 'file1', '-o', 'file2'],
             returncode=1,
-            stderr='Error: too many output files provided\n'
+            stderr='cli: error: too many output files provided\n'
         )
         self.assert_command(
             'test 2 output file long',
             cli,
             ['cli', 'file', '--output-file', 'file1', '--output-file', 'file2'],
             returncode=1,
-            stderr='Error: too many output files provided\n'
+            stderr='cli: error: too many output files provided\n'
         )
 
     def test_inexistent_file(self) -> None:
@@ -232,17 +236,20 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'file'],
             returncode=1,
-            stderr="Error: can't open 'file': no such file or directory\n"
+            stderr="cli: error: can't open 'file': no such file or directory\n"
         )
 
     def test_directory(self) -> None:
         '''test convert a directory'''
+        dirname: str = 'test_dir'
+        os.mkdir(dirname)
+        self.addCleanup(lambda: os.rmdir(dirname))
         self.assert_command(
             'test directory',
             cli,
-            ['cli', '/usr'],
+            ['cli', dirname],
             returncode=1,
-            stderr='Error: /usr is a directory\n'
+            stderr=f'cli: error: {dirname} is a directory\n'
         )
 
     def test_no_css(self) -> None:
@@ -268,7 +275,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'README.md', '--colorscheme', 'unknow colorscheme'],
             returncode=1,
-            stderr='Error: unknow colorscheme \'unknow colorscheme\'\n'
+            stderr='cli: error: unknow colorscheme \'unknow colorscheme\'\n'
         )
 
     def test_no_colorscheme(self) -> None:
@@ -278,7 +285,7 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'README.md', '--colorscheme'],
             returncode=1,
-            stderr='Error: argument --colorscheme: expected one argument\n'
+            stderr='cli: error: argument --colorscheme: expected one argument\n'
         )
 
 
