@@ -3,8 +3,10 @@
 set -e
 
 PKGNAME="mdtopdf"
+APPNAME="MdToPdf"
 PKGVER=$(python -c "print(__import__('${PKGNAME}').__version__)")
 PKGREL="1"
+PKGDESC="Convert markdown file to pdf file using chromium."
 PKGDIR="pkg"
 ARCH="amd64"
 
@@ -13,13 +15,13 @@ if [ -e "${PKGDIR}" ]; then
 fi
 mkdir --verbose "${PKGDIR}"
 
-install --verbose -Dm 755 "${PKGNAME}.py" "${PKGDIR}/usr/bin/${PKGNAME}"
+install --verbose --mode 755 -D "${PKGNAME}.py" "${PKGDIR}/usr/bin/${PKGNAME}"
 
 mkdir --parents --verbose "${PKGDIR}/DEBIAN"
 cat << EOF > "${PKGDIR}/DEBIAN/control"
 Package: ${PKGNAME}
-Name: MdToPdf
-Description: Convert markdown file to pdf file using chromium.
+Name: ${APPNAME}
+Description: ${PKGDESC}
 Maintainer: Floris Bartra <floris.bartra@gmail.com>
 Version: ${PKGVER}
 Architecture: ${ARCH}
@@ -28,6 +30,9 @@ Homepage: https://github.com/floflo0/mdtopdf
 Provides: ${PKGNAME}
 EOF
 
-dpkg-deb --verbose --build "${PKGDIR}" "${PKGNAME}_${PKGVER}-${PKGREL}_${ARCH}.deb"
+dpkg-deb \
+    --verbose \
+    --build \
+    "${PKGDIR}" "${PKGNAME}_${PKGVER}-${PKGREL}_${ARCH}.deb"
 
 rm --verbose --recursive "${PKGDIR}"
