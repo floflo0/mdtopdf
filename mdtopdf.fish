@@ -1,0 +1,5 @@
+complete --command mdtopdf --short-option h --long-option help         --description 'Print help'
+complete --command mdtopdf --short-option V --long-option version      --description 'Print version'
+complete --command mdtopdf --short-option o --long-option output       --description 'the output file where the result will be saved'
+complete --command mdtopdf --short-option c --long-option colorscheme  --description 'the colorscheme used to color code blocks (default: github-dark)' --exclusive --arguments '(mdtopdf --list-colorschemes)'
+complete --command mdtopdf --long-option list-colorschemes             --description 'list all the available colorschemes and exit'

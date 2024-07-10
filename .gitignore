@@ -1,4 +1,7 @@
-.mypy_cache
+env
 __pycache__
-mdtopdf-*.pkg.tar.zst
-mdtopdf_*.deb
+
+# makepkg
+pkg/
+src/
+mdtopdf-*-x86_64.pkg.tar.zst

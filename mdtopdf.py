@@ -1,255 +1,262 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
 """mdtopdf
-Convert markdown file to pdf file using chromium.
-
-Usage:
-mdtopdf.py --help
+Convert markdown file to pdf.
 """
 
+import argparse
+import errno
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
+from typing import NoReturn
 
 import markdown
-from markdown.extensions import Extension
+from markdown.extensions.fenced_code import FencedCodeExtension
+from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 from pygments.styles import get_all_styles, get_style_by_name
-from pygments.token import Text
+from pygments.token import Token
 
 
-__version__ = "1.0.0"
+__version__ = '1.0.0'
 
 
-TMP_FILE_NAME: str = 'mdtopdf_tmp_file.html'
-CSS_URL: str = ('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/'
-                '5.1.0/github-markdown-light.css')
-DEFAULT_COLORSCHEME: str = 'dracula'
-CSS_CLASS: str = 'codehilite'
+CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.6.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
+DEFAULT_COLORSCHEME: str = 'github-dark'
+CODE_HILITE_CSS_CLASS: str = 'codehilite'
+
+EXIT_SUCCESS: int = 0
+EXIT_FAILURE: int = 1
 
 
-def error(command_name: str, message: str) -> None:
-    '''Print a formated error message in stderr.
+class ChromiumNotFoundException(Exception):
+    '''Exception raised when no chromium executable has been found on the
+    system.'''
 
-    Args:
-        message: the error message to print
+
+def find_chromium_executable() -> str:
+    '''Returns the chromium executable.
+
+    Raises:
+        ChromiumNotFoundException: No chromium executable has been found.
     '''
-    assert command_name is not None, 'command_name is not defined'
-    sys.stderr.write(f'{command_name}: error: {message}\n')
-
-
-def md_to_html(markdown_file_path: str, html_file_path: str, no_css: bool,
-               colorscheme: str) -> None:
-    '''Convert the markdown file to html.
-
-    Args:
-        markdown_file_path: the path to the markdown file
-        html_file_path: the path to the html file generated
-    '''
-    extensions: list[str | Extension] = ['fenced_code']
-    if not no_css:
-        extensions.append(CodeHiliteExtension(noclasses=True,
-                          pygments_style=colorscheme, css_class=CSS_CLASS))
-
-    with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
-        html_code = markdown.markdown(markdown_file.read(),
-                                      extensions=extensions)
-
-    with open(html_file_path, 'w', encoding='utf-8') as html_file:
-        html_file.write('<!DOCTYPE html>\n')
-        html_file.write('<html>\n')
-        html_file.write('<head>\n')
-        html_file.write('<meta charset="utf-8">\n')
-        if not no_css:
-            # use the background color of the syntax hilighting colorscheme and
-            # not from the css
-            background = get_style_by_name(colorscheme).background_color
-            # set default color depending on the colorscheme for the code blocks
-            color = get_style_by_name(colorscheme).styles[Text]
-            html_file.write(f'<link rel="stylesheet" href="{CSS_URL}">\n')
-            html_file.write('<style>\n')
-            html_file.write(f'.{CSS_CLASS} {{\n')
-            html_file.write('background: unset !important;\n')
-            html_file.write('}\n')
-            html_file.write('pre {\n')
-            html_file.write(f'background: {background} !important;\n')
-            html_file.write(f'color: {color};\n')
-            html_file.write('}\n')
-            html_file.write('</style>\n')
-        html_file.write('</head>\n')
-        html_file.write('<body class="markdown-body">\n')
-        html_file.write(f'{html_code}\n')
-        html_file.write('</body>\n')
-        html_file.write('</html>\n')
-
-
-def find_chromium_name() -> str:
-    '''Return the chromium executable name or an empty string if no chromium
-    executable is find.'''
-    for name in ['chromium', 'chromium-browser']:
+    for name in ['chromium', 'chromium-browser', 'brave']:
         if shutil.which(name) is not None:
             return name
 
-    return ''
+    raise ChromiumNotFoundException()
 
 
-def html_to_pdf(html_file_path: str, pdf_file_path: str, chromium: str,
-                command_name: str) -> None:
-    '''Convert the html file to pdf using chromium.
+def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
+              colorscheme: str) -> None:
+    '''Convert a markdown file to pdf.
 
     Args:
-        html_file_path: the path to the html file
-        pdf_file_path: the path to the pdf file
-        chromium: the path to the chromium executable to use.
+        markdown_file_path: The path to the markdown file to convert.
+        pdf_file_path: The path to save the generated pdf file.
+        colorscheme: The colorscheme used to color code blocks.
+
+    Raises:
+        ChromiumNotFoundException: No chromium executable has been found.
     '''
-    chromium = find_chromium_name()
-    if not chromium:
-        error(command_name, 'could not find chromium executable')
+    html_file_fd: int
+    html_file_path: str
+    html_file_fd, html_file_path = tempfile.mkstemp(suffix='.html')
+
+    with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
+        markdown_content: str = markdown_file.read()
+
+    html_code: str = markdown.markdown(
+        markdown_content,
+        extensions=[
+            FencedCodeExtension(),
+            TocExtension(),
+            CodeHiliteExtension(
+                noclasses=True,
+                pygments_style=colorscheme,
+                use_pygments=True,
+                css_class=CODE_HILITE_CSS_CLASS
+            )
+        ]
+    )
+
+    style = get_style_by_name(colorscheme)
+    background: str = style.background_color
+    color: str = style.styles[Token]
+    title: str = os.path.basename(pdf_file_path)
+    with os.fdopen(html_file_fd, 'w', encoding='utf-8') as html_file:
+        html_file.write(f'''\
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{CSS_URL}">
+    <title>{title}</title>
+    <style>
+        .{CODE_HILITE_CSS_CLASS} {{
+            background: unset !important;
+        }}
+        pre {{
+            background: {background} !important;
+            color: {color} !important;
+        }}
+    </style>
+</head>
+<body class="markdown-body">
+    {html_code}
+</body>
+</html>
+''')
+
+    chromium: str = find_chromium_executable()
 
     subprocess.run([
-        chromium, '--headless', '--disable-gpu',
-        f'--print-to-pdf={pdf_file_path}', '--print-to-pdf-no-header',
+        chromium,
+        '--headless=new',
+        '--disable-gpu',
+        '--no-sandbox',
+        f'--print-to-pdf={pdf_file_path}',
+        '--no-pdf-header-footer',
+        '--run-all-compositor-stages-before-draw',
         html_file_path
-    ], check=True, capture_output=True)
+    ], check=True, capture_output=False)
+
+    os.remove(html_file_path)
 
 
-def md_to_pdf(markdown_file_path: str, pdf_file_path: str, no_css: bool,
-              colorscheme: str, chromium: str, command_name: str) -> None:
-    '''Convert the markdown file to pdf.
+class ArgumentParser(argparse.ArgumentParser):
+    '''Custom ArgumentParser that change exit code to 1 on error.'''
 
-    Args:
-        markdown_file_path: the path to the markdown file
-        pdf_file_path: the path to the pdf file generated
-        chromium: the path to the chromium executable to use.
-    '''
-    md_to_html(markdown_file_path, TMP_FILE_NAME, no_css, colorscheme)
-    html_to_pdf(TMP_FILE_NAME, pdf_file_path, chromium, command_name)
-    os.remove(TMP_FILE_NAME)
+    def exit(self, status: int = EXIT_SUCCESS, message: str | None = None
+             ) -> NoReturn:
+        if message:
+            self._print_message(message, sys.stderr)
+        if status != EXIT_SUCCESS:
+            status = EXIT_FAILURE
+        sys.exit(status)
 
 
-def usage(command_name: str) -> None:
-    '''Print the help message of the cli.
-
-    Arg:
-        command_name: the name of the programme to print
-    '''
-    print(f'Usage: {command_name} [OPTIONS] FILE')
-    print()
-    print('Convert markdown file to pdf file using md2html and chromium.')
-    print()
-    print('Options:')
-    print('  -h, --help              Print this help message and exit')
-    print('  -v, --version           Print the version number and exit')
-    print('  -o, --ouput-file <file> Name of output file')
-    print('  --no-css                Use the default styles of chromium')
-    print('  --colorscheme <name>    Set the colorscheme use for code blocks')
-
-
-def cli(args: list[str]) -> int:
-    '''The command line interface for the app.
+def error(program_name: str, message: str) -> NoReturn:
+    '''Print the message to stderr and exit the error code.
 
     Args:
-        args: the argument from the command line
-
-    Return 0 on success.
+        program_name: The name of the program.
+        message: The error message to print.
     '''
-    if not args:
-        sys.stderr.write('Error: no command name\n')
-        return 1
+    print(f'{program_name}: error: {message}',
+          file=sys.stderr)
+    sys.exit(EXIT_FAILURE)
 
-    command_name = args.pop(0)
-    help_flag = False
-    version_flag = False
-    file_path: str | None = None
-    output_file: str | None = None
-    no_css = False
-    colorscheme: str | None = None
 
-    while args:
-        arg = args.pop(0)
-        match arg:
-            case '-h' | '--help':
-                help_flag = True
-            case '-v' | '--version':
-                version_flag = True
-            case '-o' | '--output-file':
-                if not args:
-                    error(command_name,
-                          f'argument expected for the {arg} option')
-                    return 1
-                if output_file is not None:
-                    error(command_name, 'too many output files provided')
-                    return 1
-                output_file = args.pop(0)
-            case '--no-css':
-                no_css = True
-            case '--colorscheme':
-                if not args:
-                    error(command_name,
-                          'argument --colorscheme: expected one argument')
-                    return 1
-                colorscheme = args.pop(0)
-                if colorscheme not in get_all_styles():
-                    error(command_name,
-                          f'unknow colorscheme {repr(colorscheme)}')
-                    return 1
-            case _:
-                if arg and arg[0] == '-':
-                    error(command_name, f'unknow argument {repr(arg)}')
-                    return 1
-                if file_path is not None:
-                    error(command_name, 'too many arguments')
-                    return 1
-                file_path = arg
+def cli(argv: list[str]) -> int:
+    '''The command line interface for this application.
 
-    if help_flag:
-        usage(command_name)
-        return 0
+    Args:
+        argv: The arguments from the command line.
 
-    if version_flag:
-        print(__version__)
-        return 0
+    Returns the exit code of the application.
+    '''
+    colorschemes: list[str] = list(get_all_styles())
 
-    if file_path is None:
-        error(command_name, 'no input file provided')
-        return 1
+    def formatter(prog: str) -> argparse.HelpFormatter:
+        return argparse.HelpFormatter(prog, indent_increment=4,
+                                      max_help_position=500)
+
+    prog: str = os.path.basename(argv[0])
+    parser: ArgumentParser = ArgumentParser(
+        prog=prog,
+        description='Convert markdown file to pdf.',
+        formatter_class=formatter
+    )
+
+    filename_metavar: str = 'INPUT_FILE'
+    parser.add_argument(
+        'filename',
+        nargs='?',
+        metavar=filename_metavar,
+        help='the input file to be converted'
+    )
+    parser.add_argument(
+        '-v',
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}'
+    )
+    parser.add_argument(
+        '-o',
+        '--output',
+        metavar='OUTPUT_FILE',
+        help='the output file where the result will be saved'
+    )
+
+    def colorscheme_type(arg: str) -> str:
+        if arg not in colorschemes:
+            raise argparse.ArgumentTypeError(f'invalid choice: {repr(arg)}')
+        return arg
+
+    parser.add_argument(
+        '-c',
+        '--colorscheme',
+        choices=colorschemes,
+        default=DEFAULT_COLORSCHEME,
+        metavar='COLORSCHEME',
+        type=colorscheme_type,
+        help=(
+            'the colorscheme used to color code blocks'
+            f' (default: {DEFAULT_COLORSCHEME})'
+        )
+    )
+    parser.add_argument( '--list-colorschemes', action='store_true',
+        help='list all the available colorschemes and exit'
+    )
+
+    args: argparse.Namespace = parser.parse_args(argv[1:])
+
+    filename: str | None = args.filename
+    list_colorschemes: bool = args.list_colorschemes
+    output_file: str | None = args.output
+    colorscheme: str = args.colorscheme
+
+    if list_colorschemes:
+        print('\n'.join(colorschemes))
+        return EXIT_SUCCESS
+
+    if filename is None:
+        parser.error(
+            f'the following arguments are required: {filename_metavar}'
+        )
 
     if output_file is None:
-        output_file = file_path
-        if file_path[-3:] == '.md':
+        output_file = filename
+        if filename[-3:].lower() == '.md':
             output_file = output_file[:-3]
         output_file += '.pdf'
 
-    if os.path.isdir(file_path):
-        error(command_name, f'{file_path} is a directory')
-        return 1
+    if not os.path.exists(filename):
+        error(prog,
+              f'can\'t open {repr(filename)}: {os.strerror(errno.ENOENT)}')
 
-    if not os.path.exists(file_path):
-        error(command_name,
-              f'can\'t open {repr(file_path)}: no such file or directory')
-        return 1
+    if os.path.isdir(filename):
+        error(prog,
+              f'can\'t open {repr(filename)}: {os.strerror(errno.EISDIR)}')
 
-    if colorscheme is None:
-        colorscheme = DEFAULT_COLORSCHEME
-
-    chromium = find_chromium_name()
-    if not chromium:
-        error(command_name, 'could not find chromium executable')
-        return 1
+    if os.path.isdir(output_file):
+        error(prog,
+              f'can\'t save {repr(output_file)}: {os.strerror(errno.EISDIR)}')
 
     try:
-        md_to_pdf(file_path, output_file, no_css, colorscheme, chromium,
-                  command_name)
-    except subprocess.CalledProcessError:
-        error(command_name, 'impossble to generate the pdf')
-        return 1
+        md_to_pdf(filename, output_file, colorscheme)
+    except ChromiumNotFoundException:
+        error(prog, 'could not find any chromium executable')
 
-    return 0
+    return EXIT_SUCCESS
 
 
 def main() -> None:
-    '''Run the cli with the argument from the command line.'''
+    '''Run the cli with the arguments from the command line.'''
     sys.exit(cli(sys.argv))
 
 

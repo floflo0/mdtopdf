@@ -1,6 +1,6 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
-'''tests for mdtopdf'''
+'''Tests for mdtopdf.'''
 
 import io
 import os
@@ -8,11 +8,17 @@ import sys
 import unittest
 from typing import Callable
 
-from mdtopdf import cli, TMP_FILE_NAME
+from mdtopdf import cli
+
+
+USAGE_LINE: str = (
+    'usage: cli [-h] [-v] [-o OUTPUT_FILE] [-c COLORSCHEME] '
+    '[--list-colorschemes] [INPUT_FILE]\n'
+)
 
 
 class TestCli(unittest.TestCase):
-    '''Test the cli.'''
+    '''Test the cli function.'''
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -42,12 +48,12 @@ class TestCli(unittest.TestCase):
         '''Fail if the returncode or the output of the command don't match.
 
         Args:
-            msg: message print on failure
-            command: the command to test
-            args: the arguments fot the command
-            returncode: the expected returncode for the command
-            stdout: the expected stdout
-            stderr: the expected stderr
+            msg: The message print on failure.
+            command: The command to test.
+            args: The arguments to pass to the command.
+            returncode: The expected returncode for the command.
+            stdout: The expected stdout.
+            stderr: The expected stderr.
         '''
         sys_stdout = sys.stdout
         sys_stderr = sys.stderr
@@ -56,7 +62,12 @@ class TestCli(unittest.TestCase):
         sys.stdout = fake_stdout
         sys.stderr = fake_stderr
 
-        command_returncode = command(args)
+        command_returncode: int
+        try:
+            command_returncode = command(args)
+        except SystemExit as system_exit:
+            assert isinstance(system_exit.code, int)
+            command_returncode = system_exit.code
 
         sys.stdout = sys_stdout
         sys.stderr = sys_stderr
@@ -65,31 +76,25 @@ class TestCli(unittest.TestCase):
         self.assertEqual(stdout, fake_stdout.getvalue(), f'{msg}: stdout')
         self.assertEqual(stderr, fake_stderr.getvalue(), f'{msg}: stderr')
 
-    def test_no_command_name(self) -> None:
-        '''test with no command name'''
-        self.assert_command(
-            'test with no comamnd name',
-            cli,
-            [],
-            returncode=1,
-            stderr='Error: no command name\n'
-        )
-
     def test_help(self) -> None:
-        '''test help flag'''
-        stdout = (
-            'Usage: cli [OPTIONS] FILE\n'
+        '''Test help flags.'''
+        # pylint: disable=line-too-long
+        stdout: str = (
+            'usage: cli [-h] [-v] [-o OUTPUT_FILE] [-c COLORSCHEME] [--list-colorschemes] [INPUT_FILE]\n'
             '\n'
-            'Convert markdown file to pdf file using md2html and chromium.\n'
+            'Convert markdown file to pdf.\n'
             '\n'
-            'Options:\n'
-            '  -h, --help              Print this help message and exit\n'
-            '  -v, --version           Print the version number and exit\n'
-            '  -o, --ouput-file <file> Name of output file\n'
-            '  --no-css                Use the default styles of chromium\n'
-            '  --colorscheme <name>    Set the colorscheme use for code blocks'
+            'positional arguments:\n'
+            '    INPUT_FILE                                 the input file to be converted\n'
             '\n'
+            'options:\n'
+            '    -h, --help                                 show this help message and exit\n'
+            '    -v, --version                              show program\'s version number and exit\n'
+            '    -o OUTPUT_FILE, --output OUTPUT_FILE       the output file where the result will be saved\n'
+            '    -c COLORSCHEME, --colorscheme COLORSCHEME  the colorscheme used to color code blocks (default: github-dark)\n'
+            '    --list-colorschemes                        list all the available colorschemes and exit\n'
         )
+        # pylint: enable=line-too-long
         self.assert_command(
             'test help short flag',
             cli,
@@ -106,8 +111,8 @@ class TestCli(unittest.TestCase):
         )
 
     def test_version(self) -> None:
-        '''test version flag'''
-        stdout = '1.0.0\n'
+        '''Test version flags.'''
+        stdout = 'cli 1.0.0\n'
         self.assert_command(
             'test version short flag',
             cli,
@@ -124,27 +129,29 @@ class TestCli(unittest.TestCase):
         )
 
     def test_no_args(self) -> None:
-        '''test no arguments'''
+        '''Test giving no arguments.'''
         self.assert_command(
-            'test no arguments',
+            'test giving no arguments',
             cli,
             ['cli'],
             returncode=1,
-            stderr='cli: error: no input file provided\n'
+            stderr=USAGE_LINE + \
+                'cli: error: the following arguments are required: INPUT_FILE\n'
         )
 
     def test_too_many_args(self) -> None:
-        '''test too many arguments'''
+        '''Test giving too many arguments.'''
         self.assert_command(
-            'test too many arguments',
+            'test giving too many arguments',
             cli,
             ['cli', 'file1', 'file2', 'file3'],
             returncode=1,
-            stderr='cli: error: too many arguments\n'
+            stderr=USAGE_LINE + \
+                'cli: error: unrecognized arguments: file2 file3\n'
         )
 
     def test_no_chromium(self) -> None:
-        '''test when no chromium executable is in the path.'''
+        '''Test when no chromium executable is in the path.'''
         path = os.environ['PATH']
         os.environ['PATH'] = ''
         def restore_path() -> None:
@@ -155,31 +162,31 @@ class TestCli(unittest.TestCase):
             cli,
             ['cli', 'README.md'],
             returncode=1,
-            stderr='cli: error: could not find chromium executable\n'
+            stderr='cli: error: could not find any chromium executable\n'
         )
 
-    def test_unknow_option(self) -> None:
-        '''test unknow argument'''
+    def test_unknow_argument(self) -> None:
+        '''Test giving unknow argument.'''
         self.assert_command(
-            'test test unknow option',
+            'test giving unknow argument',
             cli,
             ['cli', '--unknow-arg'],
             returncode=1,
-            stderr="cli: error: unknow argument '--unknow-arg'\n"
+            stderr=USAGE_LINE + \
+                'cli: error: unrecognized arguments: --unknow-arg\n'
         )
 
     def test_convert_file(self) -> None:
-        '''test convert a file'''
+        '''Test convert a file.'''
         self.assert_command(
             'test convert file',
             cli,
             ['cli', 'README.md']
         )
         self.assertTrue(os.path.isfile('README.pdf'))
-        self.assertFalse(os.path.exists(TMP_FILE_NAME), 'tmp file not removed')
 
     def test_output_file(self) -> None:
-        '''test output file option'''
+        '''Test output file arguments.'''
         self.assert_command(
             'test output file short',
             cli,
@@ -189,103 +196,126 @@ class TestCli(unittest.TestCase):
         self.assert_command(
             'test output file long',
             cli,
-            ['cli', 'README.md', '--output-file', 'test_out_long.pdf']
+            ['cli', 'README.md', '--output', 'test_out_long.pdf']
         )
         self.assertTrue(os.path.isfile('test_out_long.pdf'))
 
     def test_no_ouput_file(self) -> None:
-        '''test no argument for ouput file option'''
+        '''Test giving no argument for ouput file option.'''
+        stderr: str = USAGE_LINE + \
+            'cli: error: argument -o/--output: expected one argument\n'
         self.assert_command(
-            'test no output file short',
+            'test giving no output file short',
             cli,
             ['cli', 'file', '-o'],
             returncode=1,
-            stderr='cli: error: argument expected for the -o option\n'
+            stderr=stderr
         )
         self.assert_command(
-            'test no output file long',
+            'test giving no output file long',
             cli,
-            ['cli', 'file', '--output-file'],
+            ['cli', 'file', '--output'],
             returncode=1,
-            stderr=(
-                'cli: error: argument expected for the --output-file option\n'
-            )
-        )
-
-    def test_2_output_file(self) -> None:
-        '''test 2 ouput file'''
-        self.assert_command(
-            'test 2 output file short',
-            cli,
-            ['cli', 'file', '-o', 'file1', '-o', 'file2'],
-            returncode=1,
-            stderr='cli: error: too many output files provided\n'
-        )
-        self.assert_command(
-            'test 2 output file long',
-            cli,
-            ['cli', 'file', '--output-file', 'file1', '--output-file', 'file2'],
-            returncode=1,
-            stderr='cli: error: too many output files provided\n'
+            stderr=stderr
         )
 
     def test_inexistent_file(self) -> None:
-        '''test inexistent file'''
+        '''Test inexistent file.'''
         self.assert_command(
             'test inexistent file',
             cli,
             ['cli', 'file'],
             returncode=1,
-            stderr="cli: error: can't open 'file': no such file or directory\n"
+            stderr="cli: error: can't open 'file': No such file or directory\n"
         )
 
     def test_directory(self) -> None:
-        '''test convert a directory'''
+        '''Test converting a directory.'''
         dirname: str = 'test_dir'
         os.mkdir(dirname)
         self.addCleanup(lambda: os.rmdir(dirname))
         self.assert_command(
-            'test directory',
+            'test converting a directory',
             cli,
             ['cli', dirname],
             returncode=1,
-            stderr=f'cli: error: {dirname} is a directory\n'
+            stderr=f'cli: error: can\'t open \'{dirname}\': Is a directory\n'
         )
 
-    def test_no_css(self) -> None:
-        '''test no css flag'''
+    def test_save_to_directory(self) -> None:
+        '''Test saving the pdf into a directory.'''
+        dirname: str = 'test_dir'
+        os.mkdir(dirname)
+        self.addCleanup(lambda: os.rmdir(dirname))
         self.assert_command(
-            'test --no-css',
+            'test saving the pdf into a directory',
             cli,
-            ['cli', 'README.md', '--no-css', '-o', 'no-css.pdf']
+            ['cli', 'README.md', '-o', dirname],
+            returncode=1,
+            stderr=f'cli: error: can\'t save \'{dirname}\': Is a directory\n'
         )
 
     def test_change_colorscheme(self) -> None:
-        '''test changing the colorscheme'''
+        '''Test changing the colorscheme.'''
         self.assert_command(
-            'test change colorscheme',
+            'test changing the colorscheme short',
+            cli,
+            ['cli', 'README.md', '-c', 'one-dark']
+        )
+        self.assert_command(
+            'test changing the colorscheme long',
             cli,
             ['cli', 'README.md', '--colorscheme', 'one-dark']
         )
 
     def test_unknow_colorscheme(self) -> None:
-        '''test unknow colorscheme'''
+        '''Test giving an unknow colorscheme.'''
+        stderr: str = (
+            USAGE_LINE + 'cli: error: argument -c/--colorscheme: '
+            'invalid choice: \'unknow colorscheme\'\n'
+        )
         self.assert_command(
-            'test unknow colorscheme',
+            'test giving an unknow colorscheme long',
+            cli,
+            ['cli', 'README.md', '-c', 'unknow colorscheme'],
+            returncode=1,
+            stderr=stderr
+        )
+        self.assert_command(
+            'test giving an unknow colorscheme long',
             cli,
             ['cli', 'README.md', '--colorscheme', 'unknow colorscheme'],
             returncode=1,
-            stderr='cli: error: unknow colorscheme \'unknow colorscheme\'\n'
+            stderr=stderr
         )
 
     def test_no_colorscheme(self) -> None:
-        '''test give no colorscheme'''
+        '''Test giving no colorscheme.'''
+        stderr: str = USAGE_LINE + \
+            'cli: error: argument -c/--colorscheme: expected one argument\n'
         self.assert_command(
-            'test no colorscheme',
+            'test giving no colorscheme short',
+            cli,
+            ['cli', 'README.md', '-c'],
+            returncode=1,
+            stderr=stderr
+        )
+        self.assert_command(
+            'test giving no colorscheme long',
             cli,
             ['cli', 'README.md', '--colorscheme'],
             returncode=1,
-            stderr='cli: error: argument --colorscheme: expected one argument\n'
+            stderr=stderr
+        )
+
+    def test_list_colorschemes(self) -> None:
+        '''Test listing available colorschemes.'''
+        self.assert_command(
+            'test listing available colorschemes',
+            cli,
+            ['cli', '--list-colorschemes'],
+            returncode=0,
+            stdout='abap\nalgol\nalgol_nu\narduino\nautumn\nbw\nborland\ncoffee\ncolorful\ndefault\ndracula\nemacs\nfriendly_grayscale\nfriendly\nfruity\ngithub-dark\ngruvbox-dark\ngruvbox-light\nigor\ninkpot\nlightbulb\nlilypond\nlovelace\nmanni\nmaterial\nmonokai\nmurphy\nnative\nnord-darker\nnord\none-dark\nparaiso-dark\nparaiso-light\npastie\nperldoc\nrainbow_dash\nrrt\nsas\nsolarized-dark\nsolarized-light\nstaroffice\nstata-dark\nstata-light\ntango\ntrac\nvim\nvs\nxcode\nzenburn\n'  # pylint: disable=line-too-long
         )
 
 

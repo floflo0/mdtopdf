@@ -42,22 +42,12 @@ Create the arch-package and install it.
 makepkg -cfi
 ```
 
-### Ubuntu
-
-Create the deb package and install it.
-
-```sh
-./package-deb.sh
-sudo apt install ./mdtopdf_1.0.0-1_amd64.deb
-```
-
 ## Developpement
 
 Install markdown and pygments libraries types for mypy :
 
 ```sh
-pip install types-Markdown
-pip install types-Pygments
+pip install types-Markdown types-Pygments
 ```
 
 Run the tests :
