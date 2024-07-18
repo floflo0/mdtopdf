@@ -21,7 +21,7 @@ from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Token
 
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.6.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
