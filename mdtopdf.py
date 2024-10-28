@@ -15,13 +15,14 @@ from typing import NoReturn
 
 import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
+from markdown.extensions.tables import TableExtension
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Token
 
 
-__version__ = '1.0.1'
+__version__ = '1.1.0'
 
 
 CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.6.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
@@ -73,6 +74,7 @@ def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
         markdown_content,
         extensions=[
             FencedCodeExtension(),
+            TableExtension(),
             TocExtension(),
             CodeHiliteExtension(
                 noclasses=True,

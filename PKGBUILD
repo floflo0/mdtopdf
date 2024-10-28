@@ -1,6 +1,6 @@
 # Maintainer: Floris Bartra <floris.bartra@gmail.com>
 pkgname="mdtopdf"
-pkgver=1.0.1
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Convert markdown file to pdf."
 arch=("x86_64")

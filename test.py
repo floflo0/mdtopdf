@@ -112,7 +112,7 @@ class TestCli(unittest.TestCase):
 
     def test_version(self) -> None:
         '''Test version flags.'''
-        stdout = 'cli 1.0.0\n'
+        stdout = 'cli 1.1.0\n'
         self.assert_command(
             'test version short flag',
             cli,
