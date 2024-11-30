@@ -8,7 +8,7 @@ import sys
 import unittest
 from typing import Callable
 
-from mdtopdf import cli
+from mdtopdf import cli, __version__
 
 
 USAGE_LINE: str = (
@@ -112,7 +112,7 @@ class TestCli(unittest.TestCase):
 
     def test_version(self) -> None:
         '''Test version flags.'''
-        stdout = 'cli 1.1.1\n'
+        stdout = f'cli {__version__}\n'
         self.assert_command(
             'test version short flag',
             cli,

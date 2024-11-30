@@ -22,10 +22,10 @@ from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Token
 
 
-__version__ = '1.1.1'
+__version__ = '1.2.0'
 
 
-CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.6.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
+CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
 DEFAULT_COLORSCHEME: str = 'github-dark'
 CODE_HILITE_CSS_CLASS: str = 'codehilite'
 
