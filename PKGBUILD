@@ -1,11 +1,11 @@
 # Maintainer: Floris Bartra <floris.bartra@gmail.com>
 pkgname="mdtopdf"
-pkgver=1.2.0
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="Convert markdown file to pdf."
 arch=("x86_64")
 license=("MIT")
-depends=("python" "python-markdown" "python-pygments" "chromium")
+depends=("python" "python-markdown" "python-pygments" "chromium" "python-selenium")
 provides=("${pkgname}")
 replaces=("${pkgname}")
 source=("${pkgname}.py" "${pkgname}.fish")
