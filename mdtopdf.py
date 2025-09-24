@@ -1,17 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """mdtopdf
 Convert markdown file to pdf.
 """
 
 import argparse
+import base64
 import errno
 import os
-import shutil
-import subprocess
 import sys
 import tempfile
-from typing import NoReturn
+from typing import NoReturn, TypedDict
 
 import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
@@ -20,35 +19,49 @@ from markdown.extensions.toc import TocExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
 from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Token
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 
 
-__version__ = '1.2.0'
+__version__ = '2.0.0'
 
 
 CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
 DEFAULT_COLORSCHEME: str = 'github-dark'
 CODE_HILITE_CSS_CLASS: str = 'codehilite'
+WEB_DRIVER_WAIT_TIMEOUT: int = 30  # secondes
 
 EXIT_SUCCESS: int = 0
 EXIT_FAILURE: int = 1
 
 
-class ChromiumNotFoundException(Exception):
-    '''Exception raised when no chromium executable has been found on the
-    system.'''
+class Pdf(TypedDict):
+    '''driver.execute_cdp_cmd return type.'''
+    data: str
 
 
-def find_chromium_executable() -> str:
-    '''Returns the chromium executable.
+def html_to_pdf(html_file_path: str, pdf_file_path: str) -> None:
+    '''Convert an html file to a pdf file using chromium and selenium.
 
-    Raises:
-        ChromiumNotFoundException: No chromium executable has been found.
+    Args:
+        html_file_path: The path to the html file to convert.
+        pdf_file_path: The path to save the generated pdf file.
     '''
-    for name in ['chromium', 'chromium-browser', 'brave']:
-        if shutil.which(name) is not None:
-            return name
-
-    raise ChromiumNotFoundException()
+    options = Options()
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--run-all-compositor-stages-before-draw')
+    driver = Chrome(options=options)
+    driver.get(f'file://{os.path.realpath(html_file_path)}')
+    opts = {
+        'printBackground': True,
+        'displayHeaderFooter': False,
+    }
+    pdf: Pdf = driver.execute_cdp_cmd('Page.printToPDF', opts)
+    with open(pdf_file_path, 'wb') as file:
+        file.write(base64.b64decode(pdf['data']))
+    driver.close()
 
 
 def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
@@ -59,13 +72,10 @@ def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
         markdown_file_path: The path to the markdown file to convert.
         pdf_file_path: The path to save the generated pdf file.
         colorscheme: The colorscheme used to color code blocks.
-
-    Raises:
-        ChromiumNotFoundException: No chromium executable has been found.
     '''
     html_file_fd: int
     html_file_path: str
-    html_file_fd, html_file_path = tempfile.mkstemp(suffix='.html')
+    html_file_fd, html_file_path = tempfile.mkstemp(suffix='.html', dir='.')
 
     with open(markdown_file_path, 'r', encoding='utf-8') as markdown_file:
         markdown_content: str = markdown_file.read()
@@ -118,18 +128,7 @@ def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
 </html>
 ''')
 
-    chromium: str = find_chromium_executable()
-
-    subprocess.run([
-        chromium,
-        '--headless=new',
-        '--disable-gpu',
-        '--no-sandbox',
-        f'--print-to-pdf={pdf_file_path}',
-        '--no-pdf-header-footer',
-        '--run-all-compositor-stages-before-draw',
-        html_file_path
-    ], check=True, capture_output=False)
+    html_to_pdf(html_file_path, pdf_file_path)
 
     os.remove(html_file_path)
 
@@ -254,10 +253,7 @@ def cli(argv: list[str]) -> int:
         error(prog,
               f'can\'t save {repr(output_file)}: {os.strerror(errno.EISDIR)}')
 
-    try:
-        md_to_pdf(filename, output_file, colorscheme)
-    except ChromiumNotFoundException:
-        error(prog, 'could not find any chromium executable')
+    md_to_pdf(filename, output_file, colorscheme)
 
     return EXIT_SUCCESS
 

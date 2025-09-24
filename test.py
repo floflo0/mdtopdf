@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''Tests for mdtopdf.'''
 
@@ -148,21 +148,6 @@ class TestCli(unittest.TestCase):
             returncode=1,
             stderr=USAGE_LINE + \
                 'cli: error: unrecognized arguments: file2 file3\n'
-        )
-
-    def test_no_chromium(self) -> None:
-        '''Test when no chromium executable is in the path.'''
-        path = os.environ['PATH']
-        os.environ['PATH'] = ''
-        def restore_path() -> None:
-            os.environ['PATH'] = path
-        self.addCleanup(restore_path)
-        self.assert_command(
-            'test no chromium',
-            cli,
-            ['cli', 'README.md'],
-            returncode=1,
-            stderr='cli: error: could not find any chromium executable\n'
         )
 
     def test_unknow_argument(self) -> None:
