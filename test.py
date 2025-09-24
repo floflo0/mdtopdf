@@ -85,14 +85,14 @@ class TestCli(unittest.TestCase):
             'Convert markdown file to pdf.\n'
             '\n'
             'positional arguments:\n'
-            '    INPUT_FILE                                 the input file to be converted\n'
+            '    INPUT_FILE                     the input file to be converted\n'
             '\n'
             'options:\n'
-            '    -h, --help                                 show this help message and exit\n'
-            '    -v, --version                              show program\'s version number and exit\n'
-            '    -o OUTPUT_FILE, --output OUTPUT_FILE       the output file where the result will be saved\n'
-            '    -c COLORSCHEME, --colorscheme COLORSCHEME  the colorscheme used to color code blocks (default: github-dark)\n'
-            '    --list-colorschemes                        list all the available colorschemes and exit\n'
+            '    -h, --help                     show this help message and exit\n'
+            '    -v, --version                  show program\'s version number and exit\n'
+            '    -o, --output OUTPUT_FILE       the output file where the result will be saved\n'
+            '    -c, --colorscheme COLORSCHEME  the colorscheme used to color code blocks (default: github-dark)\n'
+            '    --list-colorschemes            list all the available colorschemes and exit\n'
         )
         # pylint: enable=line-too-long
         self.assert_command(
