@@ -1,4 +1,4 @@
-mypy==1.13.0
-pylint==3.3.1
-types-Markdown==3.7.0.20240822
-types-Pygments==2.18.0.20240506
+mypy==1.18.2
+pylint==3.3.8
+types-Markdown==3.9.0.20250906
+types-Pygments==2.19.0.20250809
