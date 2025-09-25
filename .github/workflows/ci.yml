@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    type: [opened]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          check-latest: true
+
+      - run: python -m venv env
+      - run: source env/bin/activate
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run mypy
+        run: mypy
+
+      - name: Run tests
+        run: COLUMNS=300 LINES=100 script --quiet --command ./test.py /dev/null
+
+      - name: Run pylint
+        run: pylint *.py
