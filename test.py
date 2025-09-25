@@ -13,7 +13,7 @@ from mdtopdf import cli, __version__
 
 USAGE_LINE: str = (
     'usage: cli [-h] [-v] [-o OUTPUT_FILE] [-c COLORSCHEME] '
-    '[--list-colorschemes] [INPUT_FILE]\n'
+    '[--no-page-number] [--list-colorschemes] [INPUT_FILE]\n'
 )
 
 
@@ -80,7 +80,7 @@ class TestCli(unittest.TestCase):
         '''Test help flags.'''
         # pylint: disable=line-too-long
         stdout: str = (
-            'usage: cli [-h] [-v] [-o OUTPUT_FILE] [-c COLORSCHEME] [--list-colorschemes] [INPUT_FILE]\n'
+            'usage: cli [-h] [-v] [-o OUTPUT_FILE] [-c COLORSCHEME] [--no-page-number] [--list-colorschemes] [INPUT_FILE]\n'
             '\n'
             'Convert markdown file to pdf.\n'
             '\n'
@@ -92,6 +92,7 @@ class TestCli(unittest.TestCase):
             '    -v, --version                  show program\'s version number and exit\n'
             '    -o, --output OUTPUT_FILE       the output file where the result will be saved\n'
             '    -c, --colorscheme COLORSCHEME  the colorscheme used to color code blocks (default: github-dark)\n'
+            '    --no-page-number               don\'t add page number at the bottom of the pages\n'
             '    --list-colorschemes            list all the available colorschemes and exit\n'
         )
         # pylint: enable=line-too-long
@@ -292,6 +293,16 @@ class TestCli(unittest.TestCase):
             returncode=1,
             stderr=stderr
         )
+
+    def test_no_page_number_option(self) -> None:
+        '''Test the --no-page-number option.'''
+        self.assert_command(
+            'test --no-page-number option',
+            cli,
+            ['cli', 'README.md', '--no-page-number'],
+            returncode=0,
+        )
+
 
     def test_list_colorschemes(self) -> None:
         '''Test listing available colorschemes.'''

@@ -40,12 +40,14 @@ class Pdf(TypedDict):
     data: str
 
 
-def html_to_pdf(html_file_path: str, pdf_file_path: str) -> None:
+def html_to_pdf(html_file_path: str, pdf_file_path: str, add_page_number: bool
+                ) -> None:
     '''Convert an html file to a pdf file using chromium and selenium.
 
     Args:
         html_file_path: The path to the html file to convert.
         pdf_file_path: The path to save the generated pdf file.
+        add_page_number: Add page number at the end of the pages.
     '''
     options = Options()
     options.add_argument('--headless=new')
@@ -56,7 +58,13 @@ def html_to_pdf(html_file_path: str, pdf_file_path: str) -> None:
     driver.get(f'file://{os.path.realpath(html_file_path)}')
     opts = {
         'printBackground': True,
-        'displayHeaderFooter': False,
+        'displayHeaderFooter': add_page_number,
+        'headerTemplate': '<div></div>',
+        'footerTemplate': '''<div
+    id="footer-template"
+    style="font-size: 15px !important; margin: 0 auto;"
+    class="pageNumber"
+></div>''',
     }
     pdf: Pdf = driver.execute_cdp_cmd('Page.printToPDF', opts)
     with open(pdf_file_path, 'wb') as file:
@@ -65,13 +73,14 @@ def html_to_pdf(html_file_path: str, pdf_file_path: str) -> None:
 
 
 def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
-              colorscheme: str) -> None:
+              colorscheme: str, add_page_number: bool) -> None:
     '''Convert a markdown file to pdf.
 
     Args:
         markdown_file_path: The path to the markdown file to convert.
         pdf_file_path: The path to save the generated pdf file.
         colorscheme: The colorscheme used to color code blocks.
+        add_page_number: Add page number at the end of the pages.
     '''
     html_file_fd: int
     html_file_path: str
@@ -128,7 +137,7 @@ def md_to_pdf(markdown_file_path: str, pdf_file_path: str,
 </html>
 ''')
 
-    html_to_pdf(html_file_path, pdf_file_path)
+    html_to_pdf(html_file_path, pdf_file_path, add_page_number)
 
     os.remove(html_file_path)
 
@@ -215,13 +224,21 @@ def cli(argv: list[str]) -> int:
             f' (default: {DEFAULT_COLORSCHEME})'
         )
     )
-    parser.add_argument( '--list-colorschemes', action='store_true',
+    parser.add_argument(
+        '--no-page-number',
+        action='store_true',
+        help='don\'t add page number at the bottom of the pages'
+    )
+    parser.add_argument(
+        '--list-colorschemes',
+        action='store_true',
         help='list all the available colorschemes and exit'
     )
 
     args: argparse.Namespace = parser.parse_args(argv[1:])
 
     filename: str | None = args.filename
+    no_page_number: bool = args.no_page_number
     list_colorschemes: bool = args.list_colorschemes
     output_file: str | None = args.output
     colorscheme: str = args.colorscheme
@@ -253,7 +270,7 @@ def cli(argv: list[str]) -> int:
         error(prog,
               f'can\'t save {repr(output_file)}: {os.strerror(errno.EISDIR)}')
 
-    md_to_pdf(filename, output_file, colorscheme)
+    md_to_pdf(filename, output_file, colorscheme, not no_page_number)
 
     return EXIT_SUCCESS
 
