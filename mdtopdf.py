@@ -23,7 +23,7 @@ from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 
 
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 
 
 CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
