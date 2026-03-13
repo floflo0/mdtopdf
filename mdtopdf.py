@@ -21,9 +21,10 @@ from pygments.styles import get_all_styles, get_style_by_name
 from pygments.token import Token
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 
-__version__ = '2.1.0'
+__version__ = '2.1.1'
 
 
 CSS_URL: str = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.8.1/github-markdown-light.min.css'  # pylint: disable=line-too-long
@@ -54,7 +55,8 @@ def html_to_pdf(html_file_path: str, pdf_file_path: str, add_page_number: bool
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     options.add_argument('--run-all-compositor-stages-before-draw')
-    driver = Chrome(options=options)
+    service = Service("/usr/bin/chromedriver")
+    driver = Chrome(options=options, service=service)
     driver.get(f'file://{os.path.realpath(html_file_path)}')
     opts = {
         'printBackground': True,
